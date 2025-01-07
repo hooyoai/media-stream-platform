@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
+import 'custom_video_player.dart';
+import 'video_service.dart';
 
 class VideoPlayerScreen extends ConsumerStatefulWidget {
   final String videoId;
@@ -16,75 +16,49 @@ class VideoPlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
-  late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
   bool _isLoading = true;
   String? _error;
+  Map<String, dynamic>? _videoDetails;
+  String? _streamUrl;
 
   @override
   void initState() {
     super.initState();
-    _initializePlayer();
+    _loadVideoData();
   }
 
-  Future<void> _initializePlayer() async {
+  Future<void> _loadVideoData() async {
     try {
-      // In a real app, you would get the URL from your backend
-      final videoUrl = 'https://your-cdn.com/videos/${widget.videoId}/manifest.m3u8';
-      
-      _videoPlayerController = VideoPlayerController.networkUrl(
-        Uri.parse(videoUrl),
-      );
+      final streamUrlFuture = ref.read(videoStreamUrlProvider(widget.videoId).future);
+      final videoDetailsFuture = ref.read(videoDetailsProvider(widget.videoId).future);
 
-      await _videoPlayerController.initialize();
+      final results = await Future.wait([
+        streamUrlFuture,
+        videoDetailsFuture,
+      ]);
 
-      _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
-        autoPlay: true,
-        looping: false,
-        allowFullScreen: true,
-        allowMuting: true,
-        allowPlaybackSpeedChanging: true,
-        showControls: true,
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Text(
-              errorMessage,
-              style: const TextStyle(color: Colors.white),
-            ),
-          );
-        },
-        placeholder: Container(
-          color: Colors.black,
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-      );
-
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _streamUrl = results[0] as String;
+          _videoDetails = results[1] as Map<String, dynamic>;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
-  }
-
-  @override
-  void dispose() {
-    _videoPlayerController.dispose();
-    _chewieController?.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Video Player'),
+        title: Text(_videoDetails?['title'] ?? 'Loading...'),
       ),
       body: _buildBody(),
     );
@@ -119,7 +93,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
                   _error = null;
                   _isLoading = true;
                 });
-                _initializePlayer();
+                _loadVideoData();
               },
               child: const Text('Retry'),
             ),
@@ -128,40 +102,39 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
       );
     }
 
-    if (_chewieController == null) {
+    if (_streamUrl == null) {
       return const Center(
-        child: Text('Something went wrong'),
+        child: Text('Stream URL not available'),
       );
     }
 
-    return Column(
-      children: [
-        AspectRatio(
-          aspectRatio: _videoPlayerController.value.aspectRatio,
-          child: Chewie(
-            controller: _chewieController!,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CustomVideoPlayer(
+            url: _streamUrl!,
+            title: _videoDetails?['title'] ?? '',
           ),
-        ),
-        Expanded(
-          child: Padding(
+          Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Video Title Here', // TODO: Get from video metadata
+                  _videoDetails?['title'] ?? '',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Video description here...', // TODO: Get from video metadata
+                  _videoDetails?['description'] ?? '',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
