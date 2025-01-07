@@ -1,0 +1,26 @@
+service: auth-service
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+functions:
+  verifyToken:
+    handler: src/handlers/verifyToken.handler
+    events:
+      - http:
+          path: /auth/verify
+          method: post
+          cors: true
+
+  refreshToken:
+    handler: src/handlers/refreshToken.handler
+    events:
+      - http:
+          path: /auth/refresh
+          method: post
+          cors: true
+
+# TODO: Add more auth endpoints as needed
