@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +25,3 @@ class MediaStreamApp extends StatelessWidget {
     );
   }
 }
-
-// TODO: Implement AuthWrapper class
-// TODO: Setup route configuration
-// TODO: Add state management setup
