@@ -1,0 +1,63 @@
+service: stream-service
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  environment:
+    STREAMS_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+    MEDIA_BUCKET: ${self:service}-media-${opt:stage, self:provider.stage}
+
+resources:
+  Resources:
+    StreamsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.STREAMS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: StatusIndex
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    MediaBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.MEDIA_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET]
+              AllowedOrigins: ['*']
+              MaxAge: 3000
+
+functions:
+  getStreamUrl:
+    handler: src/handlers/getStreamUrl.handler
+    events:
+      - http:
+          path: /stream/{id}/url
+          method: get
+          cors: true
+          authorizer: aws_iam
+
+  createStream:
+    handler: src/handlers/createStream.handler
+    events:
+      - http:
+          path: /stream
+          method: post
+          cors: true
+          authorizer: aws_iam
