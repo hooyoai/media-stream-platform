@@ -1,10 +1,8 @@
-// File: mobile/lib/app/routes.dart
-// Application routing configuration
-
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
-
-// TODO: Import screens
+import '../features/screens/home_screen.dart';
+import '../features/video/video_player_screen.dart';
+import '../features/article/article_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -12,19 +10,20 @@ final router = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const HomeScreen(),
+      routes: [
+        GoRoute(
+          path: 'video/:id',
+          builder: (context, state) => VideoPlayerScreen(
+            videoId: state.pathParameters['id']!,
+          ),
+        ),
+        GoRoute(
+          path: 'article/:id',
+          builder: (context, state) => ArticleScreen(
+            articleId: state.pathParameters['id']!,
+          ),
+        ),
+      ],
     ),
-    GoRoute(
-      path: '/video/:id',
-      builder: (context, state) => VideoPlayerScreen(
-        videoId: state.params['id']!,
-      ),
-    ),
-    GoRoute(
-      path: '/article/:id',
-      builder: (context, state) => ArticleScreen(
-        articleId: state.params['id']!,
-      ),
-    ),
-    // TODO: Add more routes
   ],
 );
