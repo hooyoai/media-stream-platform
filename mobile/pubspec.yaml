@@ -17,6 +17,7 @@ dependencies:
   video_player: ^2.8.2
   cached_network_image: ^3.3.1
   http: ^1.2.0
+  wakelock_plus: ^1.1.4  # Added for video player controls
 
 dev_dependencies:
   flutter_test:
